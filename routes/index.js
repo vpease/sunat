@@ -12,7 +12,7 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'Express' });
 });
 
-router.post("/", function (req, res, next) {  
+router.post("/wsuper/Consulta/Sunat", function (req, res, next) {  
   console.log('Recibido el post : ' + JSON.stringify(req.query));  
   const consulta = req.query.request;  
   control.consultar(consulta)
