@@ -50,6 +50,7 @@ class Master {
             await page.destroy();
         });
         return Promise.resolve(res); */
+        if (!this.browser) this.abrir();
         return this.consultar(pConsulta);
     }
     async consultar(pConsulta) {
