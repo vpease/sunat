@@ -44,6 +44,9 @@ class Master {
             headless: true
         });
     }
+    async cerrar(){
+        await this.browser.close();
+    }
     async Procesar(craw, pConsulta) {        
        /*  await this.browser.process(async (page) => {
             res = await craw.getConsulta(page, pConsulta);

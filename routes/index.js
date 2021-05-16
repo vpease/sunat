@@ -20,6 +20,7 @@ router.post("/wsuper/Consulta/Sunat", function (req, res, next) {
       res.send(resp);
     })
     .catch(error => {
+      control.cerrar();
       res.send('Error');
       console.log('Error en el post: ' + error);
   })
