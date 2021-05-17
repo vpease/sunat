@@ -27,24 +27,10 @@ module.exports = class crawler{
             }
         }   
     }
-    async loadBrowser(puppet){
-        this.browser = puppet; //await puppeteer.launch({headless: false});
-        this.page = await this.browser.newPage();
-        await this.page.setViewport({ width: 600, height: 800});
-        await this.page.setRequestInterception(true);
-        this.page.on('request', (req) => {
-            if(req.resourceType() === 'image' || req.resourceType() === 'stylesheet' || req.resourceType() === 'font'){
-                req.abort();
-            }
-            else {
-                req.continue();
-            }
-        });
-        return  this.page.goto(this.getPostUrl(),{waitUntil: 'networkidle0'});
-    }
+
     async loadPage(page) {        
         await page.setViewport({ width: 600, height: 800});
-        /* await page.setRequestInterception(true);
+        /*await page.setRequestInterception(true);
         page.on('request', (req) => {
             if(req.resourceType() === 'image' || req.resourceType() === 'stylesheet' || req.resourceType() === 'font'){
                 req.abort();
@@ -52,29 +38,15 @@ module.exports = class crawler{
             else {
                 req.continue();
             }
-        }); */
+        });*/
         return  page.goto(this.getPostUrl(),{waitUntil: 'networkidle0'});        
     }
-    async getAll(puppet, pConsulta){
-        this.consulta = pConsulta;
-        return this.loadBrowser(puppet)
-        .then((res)=>{
-            return this.setFormulario1(page,)
-        })        
-        .then((res)=>{            
-            return this.setFormulario(res,this.consulta);
-        })
-        .then(res => {                        
-            return this.getDatos();
-        })        
-        .catch(err =>{
-            console.log('El error es: ' + err);            
-        })        
-    }
+  
     async getConsulta(page, pConsulta) {
         this.consulta = pConsulta;
         return this.loadPage(page)            
             .then((res) => {
+                //page.screenshot('./testresult.png');
                 if (pConsulta.length==8){
                     let ruc = '10'.concat(pConsulta);
                     const mod = this.getMod11(ruc);
@@ -102,15 +74,13 @@ module.exports = class crawler{
         return this.baseUrl + this.postUrl;
     }
     async setFormulario1(page,pConsulta){ 
-        await page.type('#txtRuc',pConsulta);
-        await page.click('#btnAceptar',{delay:1000});        
+        await page.type('#txtRuc',pConsulta,{delay:100});
+        await page.click('#btnAceptar',{delay:100});        
         return page.waitForNavigation({waitUntil: 'networkidle0'});
     }
     async getDatos1(page) {        
         try {
-            var temp=await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(1) > div > div.col-sm-7 > h4',el=>el.textContent);
-            respuesta.Data.RazonSocial = temp.split('-')[1].trim();
-            respuesta.Data.Ruc=temp.split('-')[0].trim();
+            
         }
         catch (error) {
             console.log('Error: ' + error);
@@ -118,7 +88,11 @@ module.exports = class crawler{
         return new Promise.resolve(true);
     }
     async getDatosRUC(page) {
-        let temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(7) > div > div.col-sm-7 > p',el => el.textContent);
+        var temp=await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(1) > div > div.col-sm-7 > h4',el=>el.textContent);
+        this.respuesta.Data.RazonSocial = temp.split('-')[1].trim();
+        this.respuesta.Data.Ruc=temp.split('-')[0].trim();
+
+        temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(7) > div > div.col-sm-7 > p',el => el.textContent);
         var lista =temp.split('-');
         var dir=lista[0].trim().split(' ');
         this.respuesta.Data.Departamento = dir[dir.length-1].trim();
@@ -137,7 +111,11 @@ module.exports = class crawler{
         return Promise.resolve(this.respuesta);
     }
     async getDatosDNI(page) {
-        let temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(2) > div > div.col-sm-7 > p',el=>el.textContent);
+        var temp=await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(1) > div > div.col-sm-7 > h4',el=>el.textContent);
+        this.respuesta.Data.RazonSocial = temp.split('-')[1].trim();
+        this.respuesta.Data.Ruc=temp.split('-')[0].trim();
+
+        temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(2) > div > div.col-sm-7 > p',el=>el.textContent);
         this.respuesta.Data.TipoContr= temp.trim();
         temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(6) > div > div.col-sm-7 > p',el=>el.textContent);
         this.respuesta.Data.EstadoContr= temp.trim();

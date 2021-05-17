@@ -50,7 +50,7 @@ class Master {
             },
             puppeteer,
             puppeteerOptions: {
-              headless: false,
+              headless: true,
             }
         };
     } 
@@ -64,8 +64,11 @@ class Master {
     async Procesar(craw, pConsulta) {
         let res ='';
         await this.pagePool.process(async (page) => {
+            console.log('El Pool esta en: ' +this.pagePool.pool.listenerCount())
             res = await craw.getConsulta(page, pConsulta);
+            console.log('El Pool esta en: ' +this.pagePool.pool.listenerCount())
             await page.destroy();            
+            console.log('El Pool esta en: ' +this.pagePool.pool.listenerCount())
         });
         return Promise.resolve(res);
     }
