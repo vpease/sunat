@@ -111,7 +111,7 @@ class Master {
         }; 
 
         await page.goto(this.homeUrl+'/'+this.postUrl);
-        await page.waitForNavigation({waitUntil: 'networkidle2'});
+        //await page.waitForNavigation({waitUntil: 'networkidle0'});
         await page.screenshot({ path: './testresult.png', fullPage: true })
         await page.waitFor('#txtRuc');
         await page.type('#txtRuc',pConsulta);
