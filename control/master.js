@@ -40,12 +40,13 @@ class Master {
         this.abrir();
     } 
     async abrir(){
-        this.browser = await puppeteer.launch({            
+        this.browser = await puppeteer.launch({
+            args: ['--no-sandbox'],
             headless: true
         });
     }
     async cerrar(){
-        await this.browser.close();
+        await this.browser.close();        
     }
     async Procesar(craw, pConsulta) {        
        /*  await this.browser.process(async (page) => {
@@ -53,13 +54,11 @@ class Master {
             await page.destroy();
         });
         return Promise.resolve(res); */
-        if (!this.browser) this.abrir();
+        await this.abrir();
+        await this.browser.setViewport({ width: 600, height: 800,deviceScaleFactor: 1});
         return this.consultar(pConsulta);
     }
-    async consultar(pConsulta) {
-        console.log("Inicio: " + pConsulta + ' ' + new Date());
-        let page = await this.browser.newPage();
-        await page.setViewport({ width: 600, height: 800,deviceScaleFactor: 1});
+    async minimo(page){
         await page.setRequestInterception(true);
         page.on('request', (req) => {
             if(req.resourceType() === 'image' || req.resourceType() === 'stylesheet' || req.resourceType() === 'font'){
@@ -69,6 +68,13 @@ class Master {
                 req.continue();
             }
         });
+    }
+    async consultar(pConsulta) {
+        console.log("Inicio: " + pConsulta + ' ' + new Date());
+        await this.abrir();
+        let page = await this.browser.newPage();
+        await page.setViewport({ width: 600, height: 800,deviceScaleFactor: 1});
+
         if (pConsulta.length==11) {
             return this.consultarRUC(page,1,pConsulta);
         }
@@ -135,7 +141,8 @@ class Master {
             temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(6) > div > div.col-sm-7 > p',el=>el.textContent);
             resp.Data.EstadoContr= temp.trim();            
         }
-        await page.close();        
+        //await page.close();
+        await this.cerrar();
         return Promise.resolve(resp);
     }
     consultarDNI(page,pConsulta) {
