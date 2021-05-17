@@ -111,11 +111,13 @@ class Master {
         }; 
 
         await page.goto(this.homeUrl+'/'+this.postUrl);
+        await page.waitForNavigation({waitUntil: 'networkidle2'});
+        await page.screenshot({ path: './testresult.png', fullPage: true })
         await page.waitFor('#txtRuc');
         await page.type('#txtRuc',pConsulta);
         page.$eval('#btnAceptar',form=>form.click());
         await page.waitForNavigation({waitUntil: 'networkidle2'});
-        await page.screenshot({ path: './testresult.png', fullPage: true })
+        
         var temp=await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(1) > div > div.col-sm-7 > h4',el=>el.textContent);
         resp.Data.RazonSocial = temp.split('-')[1].trim();
         resp.Data.Ruc=temp.split('-')[0].trim();
