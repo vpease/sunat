@@ -40,10 +40,12 @@ class Master {
         this.abrir();
     } 
     async abrir(){
-        this.browser = await puppeteer.launch({
-            args: ['--no-sandbox'],
-            headless: true
-        });
+        if (!this.browser) {
+            this.browser = await puppeteer.launch({
+                args: ['--no-sandbox'],
+                headless: false
+            });
+        }        
     }
     async cerrar(){
         await this.browser.close();        
@@ -74,6 +76,9 @@ class Master {
         await this.abrir();
         let page = await this.browser.newPage();
         await page.setViewport({ width: 600, height: 800,deviceScaleFactor: 1});
+        const client = await page.target().createCDPSession();
+        await client.send('Network.clearBrowserCookies');
+        await client.send('Network.clearBrowserCache');
 
         if (pConsulta.length==11) {
             return this.consultarRUC(page,1,pConsulta);
@@ -111,13 +116,14 @@ class Master {
         }; 
 
         await page.goto(this.homeUrl+'/'+this.postUrl);
-        //await page.waitForNavigation({waitUntil: 'networkidle0'});
-        await page.screenshot({ path: './testresult.png', fullPage: true })
         await page.waitFor('#txtRuc');
+        await page.focus('#txtRuc');
         await page.type('#txtRuc',pConsulta);
+        page.waitForTimeout(1000);
         page.$eval('#btnAceptar',form=>form.click());
         await page.waitForNavigation({waitUntil: 'networkidle2'});
-        
+        await page.screenshot({ path: './testresult.png', fullPage: true })
+
         var temp=await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(1) > div > div.col-sm-7 > h4',el=>el.textContent);
         resp.Data.RazonSocial = temp.split('-')[1].trim();
         resp.Data.Ruc=temp.split('-')[0].trim();
