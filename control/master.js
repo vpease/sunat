@@ -8,8 +8,6 @@ var postUrl = 'jcrS00Alias';
 
 
 class Master {
-    
-
     constructor(pHomeUrl, pPostUrl) {
         this.homeUrl = pHomeUrl;
         this.postUrl = pPostUrl;
@@ -36,19 +34,17 @@ class Master {
                     }
                 ]
             }
-        }
-        this.abrir();
+        }      
     } 
     async abrir(){
-        if (!this.browser) {
-            this.browser = await puppeteer.launch({
-                args: ['--no-sandbox'],
-                headless: false
-            });
-        }        
+        this.browser = await puppeteer.launch({            
+            args: ['--no-sandbox'],
+            defaultViewPort: { width: 600, height: 800,deviceScaleFactor: 1},
+            headless: false
+        });        
     }
     async cerrar(){
-        await this.browser.close();        
+       await this.browser.close();        
     }
     async Procesar(craw, pConsulta) {        
        /*  await this.browser.process(async (page) => {
@@ -56,8 +52,7 @@ class Master {
             await page.destroy();
         });
         return Promise.resolve(res); */
-        await this.abrir();
-        await this.browser.setViewport({ width: 600, height: 800,deviceScaleFactor: 1});
+        await this.abrir();        
         return this.consultar(pConsulta);
     }
     async minimo(page){
@@ -75,10 +70,15 @@ class Master {
         console.log("Inicio: " + pConsulta + ' ' + new Date());
         await this.abrir();
         let page = await this.browser.newPage();
-        await page.setViewport({ width: 600, height: 800,deviceScaleFactor: 1});
-        const client = await page.target().createCDPSession();
-        await client.send('Network.clearBrowserCookies');
-        await client.send('Network.clearBrowserCache');
+        /* await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            if(req.resourceType() === 'image' || req.resourceType() === 'stylesheet' || req.resourceType() === 'font'){
+                req.abort();
+            }
+            else {
+                req.continue();
+            }
+        }); */
 
         if (pConsulta.length==11) {
             return this.consultarRUC(page,1,pConsulta);
@@ -115,14 +115,13 @@ class Master {
             }
         }; 
 
-        await page.goto(this.homeUrl+'/'+this.postUrl);
-        await page.waitFor('#txtRuc');
-        await page.focus('#txtRuc');
-        await page.type('#txtRuc',pConsulta);
-        page.waitForTimeout(1000);
-        page.$eval('#btnAceptar',form=>form.click());
-        await page.waitForNavigation({waitUntil: 'networkidle2'});
-        await page.screenshot({ path: './testresult.png', fullPage: true })
+        await page.goto(this.homeUrl+this.postUrl);
+        //page.waitForNavigation({waitUntil: 'load'}),
+        await page.type('#txtRuc',pConsulta,{delay:100})            
+        await page.click('#btnAceptar',{delay:1000});
+        // page.$eval('#btnAceptar',form=>form.click());
+        await page.waitForNavigation({waitUntil: 'load'});
+        //await page.screenshot({ path: './testresult.png', fullPage: true })
 
         var temp=await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(1) > div > div.col-sm-7 > h4',el=>el.textContent);
         resp.Data.RazonSocial = temp.split('-')[1].trim();
@@ -151,7 +150,7 @@ class Master {
             resp.Data.EstadoContr= temp.trim();            
         }
         //await page.close();
-        await this.cerrar();
+        await this.cerrar();        
         return Promise.resolve(resp);
     }
     consultarDNI(page,pConsulta) {
