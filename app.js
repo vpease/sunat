@@ -14,12 +14,20 @@ console.log('El env es :' + process.env.homeUrl);
 console.log("El env es :" + process.env.postUrl);
 var homeUrl = process.env.homeUrl;
 var postUrl = process.env.postUrl;
+var pagePoolSize = process.env.pagePoolSize;
 
 var master = require('./control/master');
-var control = new master(homeUrl, postUrl);
-indexRouter.setControl(control);
+var control = new master(homeUrl, postUrl,pagePoolSize);
 
 var app = express();
+control.createPool()
+.then((res)=> {
+  indexRouter.setControl(control);
+})
+.catch((error)=>{
+  console.log('Error al abrir el pool: ' + error);
+})
+
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));

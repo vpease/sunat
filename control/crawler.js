@@ -1,17 +1,31 @@
-
 module.exports = class crawler{    
     constructor(pBaseUrl, pPostUrl) {        
         this.baseUrl = pBaseUrl;
         this.postUrl = pPostUrl;
         this.respuesta = {
-            nombre : '',
-            nacionalidad :'',
-            nacimiento :'',
-            calidad : '',
-            vencresidencia : '',
-            caducce : '',
-            emitCE : ''
-        }
+            Exito: true,
+            Mensaje: "",
+            Pila: '',
+            CodigoHash:'',
+            Data: {
+                RazonSocial: "",
+                Direccion: "",
+                Ruc: "",
+                EstadoContr:"",
+                TipoContr:"",
+                SistemaEmisionComprobante: "",
+                Departamento: "",
+                Provincia: "",
+                Distrito: "",
+                Actividades: [
+                    {
+                        id:0,
+                        CIIU:'',
+                        actividad:''
+                    }
+                ]
+            }
+        }   
     }
     async loadBrowser(puppet){
         this.browser = puppet; //await puppeteer.launch({headless: false});
@@ -30,7 +44,7 @@ module.exports = class crawler{
     }
     async loadPage(page) {        
         await page.setViewport({ width: 600, height: 800});
-        await page.setRequestInterception(true);
+        /* await page.setRequestInterception(true);
         page.on('request', (req) => {
             if(req.resourceType() === 'image' || req.resourceType() === 'stylesheet' || req.resourceType() === 'font'){
                 req.abort();
@@ -38,15 +52,14 @@ module.exports = class crawler{
             else {
                 req.continue();
             }
-        });
+        }); */
         return  page.goto(this.getPostUrl(),{waitUntil: 'networkidle0'});        
     }
     async getAll(puppet, pConsulta){
         this.consulta = pConsulta;
-
         return this.loadBrowser(puppet)
         .then((res)=>{
-            return this.page.$eval('#contentizq > div.capcha > div > div > img', img => img.src);
+            return this.setFormulario1(page,)
         })        
         .then((res)=>{            
             return this.setFormulario(res,this.consulta);
@@ -61,129 +74,94 @@ module.exports = class crawler{
     async getConsulta(page, pConsulta) {
         this.consulta = pConsulta;
         return this.loadPage(page)            
-            .then((res) => {                
-                return this.setFormulario1(page, texto, this.consulta);
+            .then((res) => {
+                if (pConsulta.length==8){
+                    let ruc = '10'.concat(pConsulta);
+                    const mod = this.getMod11(ruc);
+                    ruc = ruc.concat(mod);
+                    return this.setFormulario1(page,ruc);
+                }
+                return this.setFormulario1(page, this.consulta);
             })
             .then(res => {
-                return this.getDatos1(page);
+                if (this.consulta.length==11){
+                    return this.getDatosRUC(page);
+                } else {
+                    return this.getDatosDNI(page);
+                }
             })
             .catch(err => {
                 console.log('El error es: ' + err);
                 respuesta.estado = 1;
                 respuesta.mensaje = "Intentar de nuevo";
-                return resolve(respuesta);
+                return resolve(this.respuesta);
             })
     }
     getPostUrl() {
         console.log("la ruta post es: " + this.baseUrl + this.postUrl);
         return this.baseUrl + this.postUrl;
     }
-    getGetUrl(){
-        return this.baseUrl + this.postUrl+'?AspxAutoDetectCookieSupport=1';
-    }
-    async setFormulario(res,consulta){
-        
-        await this.page.focus('#ctl00_bodypage_txtnumerodoc');        
-        await this.page.keyboard.type(consulta.ce);
-        
-        await this.page.focus('#ctl00_bodypage_cbodia');
-        await this.page.keyboard.type(consulta.dia);
-        
-        await this.page.focus('#ctl00_bodypage_cbomes');
-        await this.page.keyboard.type(consulta.mes);
-        
-        await this.page.focus('#ctl00_bodypage_cboanio');
-        await this.page.keyboard.type(consulta.anio);
-        
-        await this.page.focus('#ctl00_bodypage_txtvalidator');
-        await this.page.keyboard.type(res);
-        
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        this.page.$eval('#ctl00_bodypage_btnverificar', form => form.click());
-        return this.page.waitForNavigation({waitUntil: 'networkidle0'});
-    }
-    async setFormulario1(page,res,consulta){
-        
-        await page.focus('#ctl00_bodypage_txtnumerodoc');        
-        await page.keyboard.type(consulta.ce);
-        
-        await page.focus('#ctl00_bodypage_cbodia');
-        await page.keyboard.type(consulta.dia);
-        
-        await page.focus('#ctl00_bodypage_cbomes');
-        await page.keyboard.type(consulta.mes);
-        
-        await page.focus('#ctl00_bodypage_cboanio');
-        await page.keyboard.type(consulta.anio);
-        
-        await page.focus('#ctl00_bodypage_txtvalidator');
-        await page.keyboard.type(res);
-        
-        await new Promise(resolve => setTimeout(resolve, 4000));
-        
-        page.$eval('#ctl00_bodypage_btnverificar', form => form.click());
+    async setFormulario1(page,pConsulta){ 
+        await page.type('#txtRuc',pConsulta);
+        await page.click('#btnAceptar',{delay:1000});        
         return page.waitForNavigation({waitUntil: 'networkidle0'});
     }
-    async getDatos() {
-        var respuesta = {
-            nombre: '',
-            nacionalidad: '',
-            nacimiento: '',
-            calidad: '',
-            vencresidencia: '',
-            caducce: '',
-            emitCE: ''
-        };
+    async getDatos1(page) {        
         try {
-            var err = await this.page.$eval('#ctl00_bodypage_lblmensaje',text => text.textContent);
-            console.error('El mensaje de error en el form: ' + err);
-            return false;
+            var temp=await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(1) > div > div.col-sm-7 > h4',el=>el.textContent);
+            respuesta.Data.RazonSocial = temp.split('-')[1].trim();
+            respuesta.Data.Ruc=temp.split('-')[0].trim();
         }
-        catch(error){                     
-            respuesta.nombre = await this.page.$eval('#ctl00_bodypage_lblnombre', text => text.textContent);
-            respuesta.nacionalidad = await this.page.$eval('#ctl00_bodypage_lblnacionalidad', text => text.textContent);
-            respuesta.nacimiento = await this.page.$eval('#ctl00_bodypage_lblfecnac', text => text.textContent);
-            respuesta.calidad = await this.page.$eval('#ctl00_bodypage_lblmensaje_CM', text => text.textContent);
-            respuesta.vencresidencia = await this.page.$eval('#ctl00_bodypage_lblfecha_residencia', text => text.textContent);
-            respuesta.caducce = await this.page.$eval('#ctl00_bodypage_lblmensaje_cad', text => text.textContent);
-            respuesta.emitCE = await this.page.$eval('#ctl00_bodypage_lblmensaje_emi', text => text.textContent);
-            return new Promise.resolve(respuesta);
+        catch (error) {
+            console.log('Error: ' + error);
         }
+        return new Promise.resolve(true);
     }
-    async getDatos1(page) {
-        var respuesta = {
-            estado: 0,
-            mensaje: '',
-            nombre: '',
-            nacionalidad: '',
-            nacimiento: '',
-            calidad: '',
-            vencresidencia: '',
-            caducce: '',
-            emitCE: ''
-        };
-        try {
-            var err = await page.$eval('#ctl00_bodypage_lblmensaje', text => text.textContent);
-            if (err.indexOf('no es correcto') > 0) {
-                respuesta.estado = 1;
-                respuesta.mensaje = "Intentar de nuevo";
-            } else {
-                respuesta.estado = 2;
-                respuesta.mensaje = err;
-            }
-        }
-        catch (error) {     
-            respuesta.estado = 0;
-            respuesta.mensaje = 'ok';
-            respuesta.nombre = await page.$eval('#ctl00_bodypage_lblnombre', text => text.textContent);
-            respuesta.nacionalidad = await page.$eval('#ctl00_bodypage_lblnacionalidad', text => text.textContent);
-            respuesta.nacimiento = await page.$eval('#ctl00_bodypage_lblfecnac', text => text.textContent);
-            respuesta.calidad = await page.$eval('#ctl00_bodypage_lblmensaje_CM', text => text.textContent);
-            respuesta.vencresidencia = await page.$eval('#ctl00_bodypage_lblfecha_residencia', text => text.textContent);
-            respuesta.caducce = await page.$eval('#ctl00_bodypage_lblmensaje_cad', text => text.textContent);
-            respuesta.emitCE = await page.$eval('#ctl00_bodypage_lblmensaje_emi', text => text.textContent);            
-        }
-        return new Promise.resolve(respuesta);
+    async getDatosRUC(page) {
+        let temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(7) > div > div.col-sm-7 > p',el => el.textContent);
+        var lista =temp.split('-');
+        var dir=lista[0].trim().split(' ');
+        this.respuesta.Data.Departamento = dir[dir.length-1].trim();
+        this.respuesta.Data.Distrito = lista[lista.length-1].trim();
+        this.respuesta.Data.Provincia = lista[lista.length-2].trim();
+        const concat= (acum, current) => acum + ' '+ current;
+        dir.splice(dir.length-1);
+        this.respuesta.Data.Direccion = dir.reduce(concat).trim();
+        
+        temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(5) > div > div.col-sm-7 > p',el=>el.textContent);
+        this.respuesta.Data.TipoContr= temp.trim();
+        temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(2) > div > div.col-sm-7 > p',el=>el.textContent);
+        this.respuesta.Data.EstadoContr= temp.trim();
+        temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(8) > div > div:nth-child(2) > p',el=>el.textContent);
+        this.respuesta.Data.SistemaEmisionComprobante= temp.trim();
+        return Promise.resolve(this.respuesta);
     }
+    async getDatosDNI(page) {
+        let temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(2) > div > div.col-sm-7 > p',el=>el.textContent);
+        this.respuesta.Data.TipoContr= temp.trim();
+        temp = await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(6) > div > div.col-sm-7 > p',el=>el.textContent);
+        this.respuesta.Data.EstadoContr= temp.trim();
+        return Promise.resolve(this.respuesta);
+    }
+    consultarDNI(page,pConsulta) {
+        let ruc = '10'.concat(pConsulta);
+        const mod = this.getMod11(ruc);
+        ruc = ruc.concat(mod);
+        return this.consultar(page,2,ruc);
+    }
+    getMod11(datos){
+        let modN = 11;
+        var calc, i, checksum = 0, // running checksum total
+        j = [5,4,3,2,7,6,5,4,3,2]; // toma el valor 1 o 2
+        
+        // Procesa cada digito comenzando por la derecha
+        for (i = datos.length - 1; i >= 0; i -= 1) {
+            // Extrae el siguiente digito y multiplica por 1 o 2 en digitos alternativos
+            calc = Number(datos.charAt(i)) * j[i];
+            checksum = checksum + calc;            
+        }
+        var mod = checksum % modN;        
+        return (modN - mod);
+    }
+
 }
