@@ -45,8 +45,7 @@ module.exports = class crawler{
     async getConsulta(page, pConsulta) {
         this.consulta = pConsulta;
         return this.loadPage(page)            
-            .then((res) => {
-                //page.screenshot('./testresult.png');
+            .then((res) => {                
                 if (pConsulta.length==8){
                     let ruc = '10'.concat(pConsulta);
                     const mod = this.getMod11(ruc);
@@ -74,19 +73,11 @@ module.exports = class crawler{
         return this.baseUrl + this.postUrl;
     }
     async setFormulario1(page,pConsulta){ 
-        await page.type('#txtRuc',pConsulta,{delay:100});
-        await page.click('#btnAceptar',{delay:100});        
+        await page.type('#txtRuc',pConsulta,{delay:10});
+        await page.click('#btnAceptar',{delay:10});        
         return page.waitForNavigation({waitUntil: 'networkidle0'});
     }
-    async getDatos1(page) {        
-        try {
-            
-        }
-        catch (error) {
-            console.log('Error: ' + error);
-        }
-        return new Promise.resolve(true);
-    }
+    
     async getDatosRUC(page) {
         var temp=await page.$eval('body > div > div.row > div > div.panel.panel-primary > div.list-group > div:nth-child(1) > div > div.col-sm-7 > h4',el=>el.textContent);
         this.respuesta.Data.RazonSocial = temp.split('-')[1].trim();

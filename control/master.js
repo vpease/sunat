@@ -50,7 +50,7 @@ class Master {
             },
             puppeteer,
             puppeteerOptions: {
-              headless: true,
+              headless: false,
             }
         };
     } 
@@ -87,7 +87,7 @@ class Master {
         console.log("Inicio: " + pConsulta + ' ' + new Date());
         var craw = new crawler(this.homeUrl,this.postUrl);
         var res = '';
-        res = await this.Procesar(craw,pConsulta);
+        res = this.Procesar(craw,pConsulta);
         return Promise.resolve(res);
    }   
 }
